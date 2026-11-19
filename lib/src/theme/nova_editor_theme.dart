@@ -5,9 +5,15 @@ import 'package:re_highlight/re_highlight.dart';
 /// Colours and text styles the editor surface paints with.
 ///
 /// Nova resolves its theme packs into this shape; the package never reads app
-/// state, which keeps it testable without a provider container.
+/// state, which keeps it testable without a provider container. Ready-made
+/// instances are available in `nova_builtin_themes.dart`.
 @immutable
 class NovaEditorTheme {
+  /// Creates an editor theme from an explicit set of colours and token styles.
+  ///
+  /// All arguments are required except the diagnostic and divider colours,
+  /// which default to sensible values. Prefer one of the constants in
+  /// `nova_builtin_themes.dart` when it matches the desired look.
   const NovaEditorTheme({
     required this.background,
     required this.foreground,
@@ -44,12 +50,27 @@ class NovaEditorTheme {
   /// the active pack. The `root` entry supplies the base style.
   final Map<String, TextStyle> tokens;
 
+  /// The colour of error markers in the diagnostics strip.
   final Color error;
+
+  /// The colour of warning markers in the diagnostics strip.
   final Color warning;
+
+  /// The colour of informational markers in the diagnostics strip.
   final Color info;
+
+  /// The colour of the hairline between the gutter and the code.
   final Color divider;
 
   /// The style `re_editor` paints the document with.
+  ///
+  /// Foreground, background, selection, cursor and line-number colours come
+  /// from this theme; typography is supplied by the caller so the same theme
+  /// can be reused with different fonts and sizes.
+  ///
+  /// The [fontFamily] may be null to use the ambient font, [fontSize] and
+  /// [fontHeight] set the text metrics, and [codeTheme] supplies syntax
+  /// highlighting (pass null to disable it).
   CodeEditorStyle editorStyle({
     required String? fontFamily,
     required double fontSize,
@@ -73,9 +94,14 @@ class NovaEditorTheme {
 
   /// The token map as a `re_editor` highlighting theme for one language.
   ///
-  /// Returns null when the language has no highlighting rule, which leaves the
-  /// document painted in [foreground] instead of dropping highlighting for
-  /// lines `re_editor` cannot classify.
+  /// [languageId] is the key under which the rule is registered (for example
+  /// `'python'` or `'dart'`), and [mode] is the `re_highlight` language rule
+  /// from a package such as `package:re_highlight/languages/python.dart`.
+  ///
+  /// The returned theme always uses this value's [tokens]. The method itself
+  /// never returns null; a language without a matching rule simply falls back
+  /// to [foreground] inside `re_editor`, which keeps highlighting for the
+  /// lines it can still classify.
   CodeHighlightTheme? highlightTheme(String languageId, Mode mode) {
     return CodeHighlightTheme(
       languages: <String, CodeHighlightThemeMode>{
@@ -85,6 +111,12 @@ class NovaEditorTheme {
     );
   }
 
+  /// Returns a copy of this theme with the supplied fields replaced.
+  ///
+  /// Only the UI colours and token map are accepted here; the diagnostic and
+  /// divider colours are always carried over unchanged. Omitting an argument
+  /// keeps the current value, so `copyWith()` with no arguments returns an
+  /// equivalent theme. This instance is never mutated.
   NovaEditorTheme copyWith({
     Color? background,
     Color? foreground,
@@ -111,8 +143,16 @@ class NovaEditorTheme {
 }
 
 /// How much room the gutter takes and what it shows.
+///
+/// A separate value from [NovaEditorTheme] so layout preferences (which
+/// columns to show and how wide they are) can be reused across themes.
 @immutable
 class NovaGutterStyle {
+  /// Creates a gutter style with optional layout overrides.
+  ///
+  /// By default line numbers and folding handles are shown, the fold column is
+  /// 16 logical pixels wide, and the gutter reserves room for three digits.
+  /// Leaving [background] or [dividerColor] null inherits or omits them.
   const NovaGutterStyle({
     this.showLineNumbers = true,
     this.showFoldingHandles = true,
