@@ -187,6 +187,124 @@ void main() {
     expect(controller.selection.extentOffset, 2);
     await _settle(tester);
   });
+
+  testWidgets('reports the fold controller to the host', (tester) async {
+    final controller = _controller('def f():\n    pass');
+    CodeChunkController? reported;
+    await _pumpEditor(
+      tester,
+      NovaEditor(
+        controller: controller,
+        theme: _theme,
+        languageId: 'python',
+        fontFamily: 'monospace',
+        onChunkControllerReady: (value) => reported = value,
+      ),
+    );
+
+    expect(reported, isNotNull);
+    await _settle(tester);
+  });
+
+  testWidgets('uses a host supplied fold controller', (tester) async {
+    final controller = _controller('def f():\n    pass\n\nx = 2');
+    final CodeChunkController chunk = CodeChunkController(
+      controller,
+      NovaChunkAnalyzer.forLanguage('python'),
+    );
+    addTearDown(chunk.dispose);
+    CodeChunkController? reported;
+    await _pumpEditor(
+      tester,
+      NovaEditor(
+        controller: controller,
+        theme: _theme,
+        languageId: 'python',
+        fontFamily: 'monospace',
+        chunkController: chunk,
+        onChunkControllerReady: (value) => reported = value,
+      ),
+    );
+
+    expect(reported, same(chunk));
+    await _settle(tester);
+  });
+
+  testWidgets('the reported controller drives novaFoldAll', (tester) async {
+    final controller = _controller('def f():\n    return 1\n\nx = 2');
+    CodeChunkController? reported;
+    await _pumpEditor(
+      tester,
+      NovaEditor(
+        controller: controller,
+        theme: _theme,
+        languageId: 'python',
+        fontFamily: 'monospace',
+        onChunkControllerReady: (value) => reported = value,
+      ),
+    );
+    await _settle(tester);
+
+    // The analyzer runs in an isolate that the widget test does not drive, so
+    // seed the chunk list the host would normally receive from it.
+    reported!.value = const <CodeChunk>[CodeChunk(0, 3)];
+    final int before = controller.codeLines.length;
+    novaFoldAll(reported!);
+    await _settle(tester);
+
+    expect(controller.codeLines.length, lessThan(before));
+  });
+
+  testWidgets('bracket highlight does not consume caret keys', (tester) async {
+    final controller = _controller('(x)');
+    controller.selection = const CodeLineSelection.collapsed(
+      index: 0,
+      offset: 1,
+    );
+    await _pumpEditor(
+      tester,
+      NovaEditor(
+        controller: controller,
+        theme: _theme,
+        languageId: 'dart',
+        fontFamily: 'monospace',
+        highlightMatchingBracket: true,
+      ),
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+
+    expect(controller.selection.extentOffset, 2);
+    await _settle(tester);
+  });
+
+  testWidgets('forwards diagnostic taps from the gutter', (tester) async {
+    final controller = _controller('x = 1\ny = 2');
+    const NovaDiagnostic diagnostic = NovaDiagnostic(
+      line: 1,
+      message: 'unused variable',
+      severity: NovaDiagnosticSeverity.warning,
+    );
+    NovaDiagnostic? tapped;
+    await _pumpEditor(
+      tester,
+      NovaEditor(
+        controller: controller,
+        theme: _theme,
+        languageId: 'dart',
+        fontFamily: 'monospace',
+        diagnostics: const <NovaDiagnostic>[diagnostic],
+        onDiagnosticTap: (value) => tapped = value,
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey<String>('nova-diagnostic-1')));
+    await tester.pump();
+
+    expect(tapped, diagnostic);
+    await _settle(tester);
+  });
 }
 
 class _AlwaysPrompts implements CodeAutocompletePromptsBuilder {
