@@ -10,9 +10,7 @@ const NovaEditorTheme _theme = NovaEditorTheme(
   selection: Color(0x337EE787),
   lineNumber: Color(0xFF6E7681),
   accent: Color(0xFF58A6FF),
-  tokens: <String, TextStyle>{
-    'root': TextStyle(color: Color(0xFFE6EDF3)),
-  },
+  tokens: <String, TextStyle>{'root': TextStyle(color: Color(0xFFE6EDF3))},
 );
 
 Widget _host(Widget child) {

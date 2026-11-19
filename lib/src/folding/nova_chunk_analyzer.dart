@@ -49,10 +49,8 @@ NovaFoldingStyle novaFoldingStyleFor(String? languageId) {
 /// matcher runs inside `re_editor`'s chunk isolate, so it must stay free of
 /// platform or widget dependencies.
 class NovaChunkAnalyzer implements CodeChunkAnalyzer {
-  const NovaChunkAnalyzer(
-    this.languageId, {
-    NovaFoldingStyle? style,
-  }) : style = style ?? NovaFoldingStyle.braces;
+  const NovaChunkAnalyzer(this.languageId, {NovaFoldingStyle? style})
+    : style = style ?? NovaFoldingStyle.braces;
 
   /// The language whose folding rules apply, as Nova names it (`python`).
   final String? languageId;

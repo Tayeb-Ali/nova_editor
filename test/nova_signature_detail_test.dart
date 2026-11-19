@@ -10,10 +10,7 @@ void main() {
         type: 'Unit',
         parameters: <String, String>{'message': 'Any?'},
       );
-      expect(
-        novaSignatureDetailFor(prompt),
-        '(message: Any?) → Unit',
-      );
+      expect(novaSignatureDetailFor(prompt), '(message: Any?) → Unit');
     });
 
     test('renders empty parameter lists', () {

@@ -303,7 +303,8 @@ class _NovaEditorState extends State<NovaEditor> {
     );
     final bool opens = _opensBlock(before);
     final String step = opens ? leading + _indent : leading;
-    final bool closes = opens && after.isNotEmpty && _closers.contains(after[0]);
+    final bool closes =
+        opens && after.isNotEmpty && _closers.contains(after[0]);
 
     if (closes) {
       controller.replaceSelection('\n$step\n$leading');
@@ -371,10 +372,8 @@ class _NovaEditorState extends State<NovaEditor> {
       controller: _inputController,
       focusNode: _focusNode,
       findController: widget.findController,
-      findBuilder: (context, findController, readOnly) => NovaFindPanel(
-        controller: findController,
-        theme: widget.theme,
-      ),
+      findBuilder: (context, findController, readOnly) =>
+          NovaFindPanel(controller: findController, theme: widget.theme),
       autofocus: widget.autofocus,
       readOnly: widget.readOnly,
       wordWrap: widget.wordWrap,
@@ -427,4 +426,3 @@ class _NovaEditorState extends State<NovaEditor> {
     );
   }
 }
-

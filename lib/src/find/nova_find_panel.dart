@@ -81,10 +81,7 @@ class NovaFindPanel extends StatelessWidget implements PreferredSizeWidget {
                   isDense: true,
                   border: InputBorder.none,
                   hintText: 'Find',
-                  hintStyle: TextStyle(
-                    fontSize: 13,
-                    color: theme.lineNumber,
-                  ),
+                  hintStyle: TextStyle(fontSize: 13, color: theme.lineNumber),
                 ),
               ),
             ),

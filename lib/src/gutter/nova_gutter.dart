@@ -58,10 +58,7 @@ CodeIndicatorBuilder novaGutterBuilder({
             ),
           SizedBox(width: style.padding * 0.5),
           if (style.dividerColor != null)
-            SizedBox(
-              width: 1,
-              child: ColoredBox(color: style.dividerColor!),
-            ),
+            SizedBox(width: 1, child: ColoredBox(color: style.dividerColor!)),
         ],
       ),
     );
@@ -143,7 +140,9 @@ class _DiagnosticPainter extends CustomPainter {
     // Paragraph indexes are visible-line indexes; diagnostics are keyed by
     // document line, so walk both and let each visible line account for the
     // lines folded into it.
-    var documentLine = controller.index2lineIndex(indicator.paragraphs.first.index);
+    var documentLine = controller.index2lineIndex(
+      indicator.paragraphs.first.index,
+    );
     for (final CodeLineRenderParagraph paragraph in indicator.paragraphs) {
       final NovaDiagnosticSeverity? severity = markers[documentLine];
       if (severity != null) {
@@ -159,7 +158,8 @@ class _DiagnosticPainter extends CustomPainter {
           );
         }
       }
-      if (paragraph.index >= 0 && paragraph.index < controller.codeLines.length) {
+      if (paragraph.index >= 0 &&
+          paragraph.index < controller.codeLines.length) {
         documentLine += controller.codeLines[paragraph.index].lineCount;
       } else {
         documentLine++;

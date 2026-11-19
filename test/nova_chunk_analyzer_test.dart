@@ -93,9 +93,7 @@ void main() {
     });
 
     test('treats a tab as four columns', () {
-      final chunks = analyzer.run(
-        _lines('def f():\n\ta = 1\n\tb = 2\nx = 3'),
-      );
+      final chunks = analyzer.run(_lines('def f():\n\ta = 1\n\tb = 2\nx = 3'));
 
       expect(_ranges(chunks), [(0, 3)]);
     });
@@ -107,9 +105,7 @@ void main() {
         'dart',
         style: NovaFoldingStyle.braces,
       );
-      final chunks = analyzer.run(
-        _lines('void main() {\n  a();\n  b();\n}'),
-      );
+      final chunks = analyzer.run(_lines('void main() {\n  a();\n  b();\n}'));
 
       expect(_ranges(chunks), [(0, 3)]);
     });
@@ -117,15 +113,9 @@ void main() {
 
   group('none', () {
     test('folds nothing', () {
-      const analyzer = NovaChunkAnalyzer(
-        'shell',
-        style: NovaFoldingStyle.none,
-      );
+      const analyzer = NovaChunkAnalyzer('shell', style: NovaFoldingStyle.none);
 
-      expect(
-        analyzer.run(_lines('f() {\n  a\n  b\n}')),
-        isEmpty,
-      );
+      expect(analyzer.run(_lines('f() {\n  a\n  b\n}')), isEmpty);
     });
   });
 }
