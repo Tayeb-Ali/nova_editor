@@ -114,10 +114,20 @@ class NovaFindPanel extends StatelessWidget implements PreferredSizeWidget {
         if (value == null) {
           return const SizedBox(width: double.infinity, height: 0);
         }
-        // The host may still use Flutter's original MaterialApp. Carrying our
-        // own transparent Material keeps material_ui's TextField/IconButton
-        // inks happy in both hosts without changing the panel's appearance.
-        return Material(type: MaterialType.transparency, child: _panel(value));
+        // A host may still use Flutter's original MaterialApp. Supplying the
+        // modern Material + its localizations here keeps material_ui's
+        // TextField/IconButton inks happy without changing the panel's look.
+        return Localizations(
+          locale: const Locale('en'),
+          delegates: const <LocalizationsDelegate<dynamic>>[
+            DefaultMaterialLocalizations.delegate,
+            DefaultWidgetsLocalizations.delegate,
+          ],
+          child: Material(
+            type: MaterialType.transparency,
+            child: _panel(value),
+          ),
+        );
       },
     );
   }
