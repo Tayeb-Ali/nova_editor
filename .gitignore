@@ -1,0 +1,6 @@
+# Flutter/Dart build output for this local package.
+.dart_tool/
+build/
+
+# Local packages are consumed through the app's lockfile, not their own.
+pubspec.lock

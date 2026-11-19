@@ -1,0 +1,23 @@
+name: nova_editor
+description: >-
+  Nova's code editing surface, built directly on re_editor. Owns the gutter,
+  folding heuristics, completion popup and input policy so the app layer only
+  deals with documents and prompts.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.3
+  flutter: ">=3.41.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  highlight: ^0.7.0
+  re_editor: ^0.10.0
+  re_highlight: ^0.0.3
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
