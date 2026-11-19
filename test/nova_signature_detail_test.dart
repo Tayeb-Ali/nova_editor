@@ -1,6 +1,38 @@
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nova_editor/nova_editor.dart';
 import 'package:re_editor/re_editor.dart';
+
+const NovaEditorTheme _theme = NovaEditorTheme(
+  background: Color(0xFF101418),
+  foreground: Color(0xFFE6EDF3),
+  cursor: Color(0xFF7EE787),
+  selection: Color(0x337EE787),
+  lineNumber: Color(0xFF6E7681),
+  accent: Color(0xFF58A6FF),
+  tokens: <String, TextStyle>{'root': TextStyle(color: Color(0xFFE6EDF3))},
+);
+
+Widget _host(
+  ValueNotifier<CodeAutocompleteEditingValue> notifier, {
+  NovaCompletionDocumentationBuilder? documentationBuilder,
+  NovaCompletionDeprecatedPredicate? deprecatedPredicate,
+}) {
+  return MaterialApp(
+    home: Scaffold(
+      body: Align(
+        alignment: Alignment.topLeft,
+        child: NovaCompletionPopup(
+          notifier: notifier,
+          onSelected: (_) {},
+          theme: _theme,
+          documentationBuilder: documentationBuilder,
+          deprecatedPredicate: deprecatedPredicate,
+        ),
+      ),
+    ),
+  );
+}
 
 void main() {
   group('novaSignatureDetailFor', () {
@@ -60,6 +92,127 @@ void main() {
       expect(detail.length, 10);
       expect(detail, endsWith('…'));
       expect(detail, '(a: int, …');
+    });
+  });
+
+  group('completion row documentation', () {
+    testWidgets('shows signature detail and documentation on separate lines', (
+      tester,
+    ) async {
+      final notifier = ValueNotifier<CodeAutocompleteEditingValue>(
+        CodeAutocompleteEditingValue(
+          input: 'pr',
+          prompts: <CodePrompt>[
+            CodeFunctionPrompt(
+              word: 'println',
+              type: 'void',
+              parameters: <String, String>{'message': 'Any?'},
+            ),
+          ],
+          index: 0,
+        ),
+      );
+      addTearDown(notifier.dispose);
+
+      await tester.pumpWidget(
+        _host(
+          notifier,
+          documentationBuilder: (_) => 'Writes a line to stdout.',
+        ),
+      );
+
+      expect(
+        find.text('(message: Any?) → void', findRichText: true),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Writes a line to stdout.', findRichText: true),
+        findsOneWidget,
+      );
+      final double height = tester
+          .widget<NovaCompletionPopup>(find.byType(NovaCompletionPopup))
+          .preferredSize
+          .height;
+      expect(
+        height,
+        NovaCompletionPopup.heightFor(1) +
+            NovaCompletionPopup.documentationExtraHeight,
+      );
+      expect(tester.getSize(find.byType(NovaCompletionPopup)).height, height);
+
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('a deprecated function keeps its detail and grows for docs', (
+      tester,
+    ) async {
+      final notifier = ValueNotifier<CodeAutocompleteEditingValue>(
+        CodeAutocompleteEditingValue(
+          input: 'pr',
+          prompts: <CodePrompt>[
+            CodeFunctionPrompt(word: 'printOld', type: 'void'),
+          ],
+          index: 0,
+        ),
+      );
+      addTearDown(notifier.dispose);
+
+      await tester.pumpWidget(
+        _host(
+          notifier,
+          documentationBuilder: (_) => 'Legacy alias.',
+          deprecatedPredicate: (_) => true,
+        ),
+      );
+
+      expect(find.text('() → void', findRichText: true), findsOneWidget);
+      expect(find.text('Legacy alias.', findRichText: true), findsOneWidget);
+      expect(
+        find.text(NovaCompletionPopup.deprecatedLabel, findRichText: true),
+        findsOneWidget,
+      );
+      expect(
+        tester.getSize(find.byType(NovaCompletionPopup)).height,
+        NovaCompletionPopup.documentedRowHeight +
+            NovaCompletionPopup.verticalPadding * 2,
+      );
+
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('long documentation is ellipsised to two lines', (
+      tester,
+    ) async {
+      final notifier = ValueNotifier<CodeAutocompleteEditingValue>(
+        CodeAutocompleteEditingValue(
+          input: 'pr',
+          prompts: <CodePrompt>[const CodeKeywordPrompt(word: 'print')],
+          index: 0,
+        ),
+      );
+      addTearDown(notifier.dispose);
+      final String documentation = List<String>.generate(
+        40,
+        (index) => 'word$index',
+      ).join(' ');
+
+      await tester.pumpWidget(
+        _host(notifier, documentationBuilder: (_) => documentation),
+      );
+
+      final Text text = tester.widget<Text>(
+        find.ancestor(
+          of: find.text(documentation, findRichText: true),
+          matching: find.byType(Text),
+        ),
+      );
+      expect(text.maxLines, NovaCompletionPopup.documentationMaxLines);
+      expect(text.overflow, TextOverflow.ellipsis);
+
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpWidget(const SizedBox());
     });
   });
 }
