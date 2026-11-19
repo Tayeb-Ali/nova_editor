@@ -1,10 +1,22 @@
 name: nova_editor
 description: >-
-  Nova's code editing surface, built directly on re_editor. Owns the gutter,
-  folding heuristics, completion popup and input policy so the app layer only
-  deals with documents and prompts.
-publish_to: none
+  A focused Flutter code editor on top of re_editor: gutter, folding,
+  completion popup, find bar and soft-keyboard input policy, with no app
+  state or provider dependencies.
 version: 0.1.0
+repository: https://github.com/Tayeb-Ali/nova_editor
+issue_tracker: https://github.com/Tayeb-Ali/nova_editor/issues
+topics:
+  - editor
+  - code-editor
+  - ide
+  - flutter
+
+screenshots:
+  - description: Tap-only completion popup with parameter and return detail.
+    path: doc/completion.png
+  - description: In-editor find bar with a match counter.
+    path: doc/find.png
 
 environment:
   sdk: ^3.13.3
@@ -13,7 +25,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  highlight: ^0.7.0
   re_editor: ^0.10.0
   re_highlight: ^0.0.3
 
@@ -21,3 +32,6 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
+
+flutter:
+  uses-material-design: true
