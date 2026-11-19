@@ -22,8 +22,11 @@ CodeAutocompleteEditingValue _value(
 
 Widget _host(
   ValueNotifier<CodeAutocompleteEditingValue> notifier,
-  ValueChanged<CodeAutocompleteResult> onSelected,
-) {
+  ValueChanged<CodeAutocompleteResult> onSelected, {
+  NovaCompletionDocumentationBuilder? documentationBuilder,
+  NovaCompletionDeprecatedPredicate? deprecatedPredicate,
+  bool loading = false,
+}) {
   return MaterialApp(
     home: Scaffold(
       backgroundColor: const Color(0xFF101418),
@@ -33,6 +36,9 @@ Widget _host(
           notifier: notifier,
           onSelected: onSelected,
           theme: _theme,
+          documentationBuilder: documentationBuilder,
+          deprecatedPredicate: deprecatedPredicate,
+          loading: loading,
         ),
       ),
     ),
@@ -145,7 +151,7 @@ void main() {
     expect(selections, 0);
     expect(selected, isNull);
 
-    await tester.tap(find.text('property'));
+    await tester.tap(find.text('property', findRichText: true));
     await tester.pump();
 
     expect(selections, 1);
@@ -169,7 +175,7 @@ void main() {
     CodeAutocompleteResult? selected;
     await tester.pumpWidget(_host(notifier, (result) => selected = result));
 
-    await tester.tap(find.text('println'));
+    await tester.tap(find.text('println', findRichText: true));
     await tester.pump();
 
     // A function completes with its parameter list, not just its name.
@@ -192,14 +198,14 @@ void main() {
     await tester.pumpWidget(_host(notifier, (_) {}));
 
     // The row already prints the name, so the detail carries only the shape.
-    expect(find.text('() → void'), findsOneWidget);
+    expect(find.text('() → void', findRichText: true), findsOneWidget);
 
     // Fields show their type.
     notifier.value = _value(<CodePrompt>[
       const CodeFieldPrompt(word: 'process', type: 'Process'),
     ]);
     await tester.pump();
-    expect(find.text('Process'), findsOneWidget);
+    expect(find.text('Process', findRichText: true), findsOneWidget);
 
     // Keywords get no trailing detail line: repeating the kind on every row was
     // the noise the redesign removed.
@@ -208,8 +214,8 @@ void main() {
     ]);
     await tester.pump();
 
-    expect(find.text('keyword'), findsNothing);
-    expect(find.text('print'), findsOneWidget);
+    expect(find.text('keyword', findRichText: true), findsNothing);
+    expect(find.text('print', findRichText: true), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
   });
@@ -248,6 +254,218 @@ void main() {
     );
     expect(directionality.textDirection, TextDirection.ltr);
 
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('shows documentation on a third line and reserves its height', (
+    tester,
+  ) async {
+    final notifier = ValueNotifier<CodeAutocompleteEditingValue>(
+      _value(<CodePrompt>[const CodeKeywordPrompt(word: 'print')]),
+    );
+    addTearDown(notifier.dispose);
+    const String documentation = 'Prints an object to standard output.';
+
+    await tester.pumpWidget(
+      _host(notifier, (_) {}, documentationBuilder: (_) => documentation),
+    );
+
+    expect(find.text(documentation, findRichText: true), findsOneWidget);
+    final NovaCompletionPopup popup = tester.widget<NovaCompletionPopup>(
+      find.byType(NovaCompletionPopup),
+    );
+    expect(
+      popup.preferredSize.height,
+      NovaCompletionPopup.heightFor(1) +
+          NovaCompletionPopup.documentationExtraHeight,
+    );
+    expect(
+      popup.preferredSize.height,
+      NovaCompletionPopup.documentedRowHeight +
+          NovaCompletionPopup.verticalPadding * 2,
+    );
+    expect(_renderedHeight(tester), popup.preferredSize.height);
+
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('grows only documented rows and keeps preferredSize exact', (
+    tester,
+  ) async {
+    final notifier = ValueNotifier<CodeAutocompleteEditingValue>(
+      _value(<CodePrompt>[
+        const CodeKeywordPrompt(word: 'print'),
+        const CodeKeywordPrompt(word: 'private'),
+      ]),
+    );
+    addTearDown(notifier.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        notifier,
+        (_) {},
+        documentationBuilder: (CodePrompt prompt) {
+          return prompt.word == 'print' ? 'Documentation for print.' : null;
+        },
+      ),
+    );
+
+    expect(
+      find.text('Documentation for print.', findRichText: true),
+      findsOneWidget,
+    );
+    final NovaCompletionPopup popup = tester.widget<NovaCompletionPopup>(
+      find.byType(NovaCompletionPopup),
+    );
+    final double expected =
+        NovaCompletionPopup.heightFor(2) +
+        NovaCompletionPopup.documentationExtraHeight;
+    expect(popup.preferredSize.height, expected);
+    expect(_renderedHeight(tester), expected);
+
+    // Blank documentation leaves the row at its ordinary height.
+    await tester.pumpWidget(
+      _host(notifier, (_) {}, documentationBuilder: (_) => '   '),
+    );
+    expect(
+      tester
+          .widget<NovaCompletionPopup>(find.byType(NovaCompletionPopup))
+          .preferredSize
+          .height,
+      NovaCompletionPopup.heightFor(2),
+    );
+    expect(_renderedHeight(tester), NovaCompletionPopup.heightFor(2));
+
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('caps documented rows at five for both heights', (tester) async {
+    final notifier = ValueNotifier<CodeAutocompleteEditingValue>(
+      _value(<CodePrompt>[
+        for (var i = 0; i < 9; i++) CodeKeywordPrompt(word: 'p$i'),
+      ]),
+    );
+    addTearDown(notifier.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        notifier,
+        (_) {},
+        documentationBuilder: (_) => 'Some documentation.',
+      ),
+    );
+
+    final NovaCompletionPopup popup = tester.widget<NovaCompletionPopup>(
+      find.byType(NovaCompletionPopup),
+    );
+    final double expected =
+        NovaCompletionPopup.verticalPadding * 2 +
+        NovaCompletionPopup.documentedRowHeight * NovaCompletionPopup.maxRows;
+    expect(popup.preferredSize.height, expected);
+    expect(_renderedHeight(tester), expected);
+
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('marks deprecated prompts without changing their semantics', (
+    tester,
+  ) async {
+    final notifier = ValueNotifier<CodeAutocompleteEditingValue>(
+      _value(<CodePrompt>[
+        const CodeKeywordPrompt(word: 'print'),
+        const CodeKeywordPrompt(word: 'oldPrint'),
+      ]),
+    );
+    addTearDown(notifier.dispose);
+
+    CodeAutocompleteResult? selected;
+    await tester.pumpWidget(
+      _host(
+        notifier,
+        (result) => selected = result,
+        deprecatedPredicate: (prompt) => prompt.word == 'oldPrint',
+      ),
+    );
+
+    expect(
+      find.text(NovaCompletionPopup.deprecatedLabel, findRichText: true),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('oldPrint', findRichText: true));
+    await tester.pump();
+
+    expect(selected?.word, 'oldPrint');
+
+    // Without a predicate nothing is marked.
+    await tester.pumpWidget(_host(notifier, (_) {}));
+    expect(
+      find.text(NovaCompletionPopup.deprecatedLabel, findRichText: true),
+      findsNothing,
+    );
+
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('shows an inert loading row only while results are pending', (
+    tester,
+  ) async {
+    final notifier = ValueNotifier<CodeAutocompleteEditingValue>(
+      _value(<CodePrompt>[]),
+    );
+    addTearDown(notifier.dispose);
+    var selections = 0;
+
+    await tester.pumpWidget(
+      _host(notifier, (_) => selections++, loading: true),
+    );
+
+    expect(
+      find.text(NovaCompletionPopup.loadingLabel, findRichText: true),
+      findsOneWidget,
+    );
+    final NovaCompletionPopup popup = tester.widget<NovaCompletionPopup>(
+      find.byType(NovaCompletionPopup),
+    );
+    expect(popup.preferredSize.height, NovaCompletionPopup.heightFor(0));
+    expect(_renderedHeight(tester), NovaCompletionPopup.heightFor(0));
+
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.tap(
+      find.text(NovaCompletionPopup.loadingLabel, findRichText: true),
+    );
+    await tester.pump();
+    expect(selections, 0);
+
+    notifier.value = _value(<CodePrompt>[
+      const CodeKeywordPrompt(word: 'print'),
+    ]);
+    await tester.pump();
+
+    expect(
+      find.text(NovaCompletionPopup.loadingLabel, findRichText: true),
+      findsNothing,
+    );
+    expect(find.text('print', findRichText: true), findsOneWidget);
+    expect(selections, 0);
+
+    await tester.tap(find.text('print', findRichText: true));
+    await tester.pump();
+    expect(selections, 1);
+
+    // Empty and not loading collapses the overlay as before.
+    notifier.value = _value(<CodePrompt>[]);
+    await tester.pumpWidget(_host(notifier, (_) => selections++));
+    expect(
+      find.text(NovaCompletionPopup.loadingLabel, findRichText: true),
+      findsNothing,
+    );
+    expect(_renderedHeight(tester), 0);
+
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpWidget(const SizedBox());
   });
 }
