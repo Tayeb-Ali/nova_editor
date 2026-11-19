@@ -11,6 +11,16 @@ import '../theme/nova_editor_theme.dart';
 /// fold column hit-tests a 16px strip that only reacts on lines that can fold.
 /// Nova adds the diagnostic strip, which maps document lines onto visible ones
 /// so markers stay next to their line while blocks are collapsed.
+///
+/// The returned builder reads fresh values from the notifier on every frame,
+/// so it can be reused for the lifetime of a single editor.
+///
+/// * [theme] supplies the line-number, foreground and diagnostic colours.
+/// * [style] controls which columns are shown and how much room they take.
+/// * [codeStyle] is the document's text style; the gutter derives its number
+///   style from it so sizes and line height stay in sync.
+/// * [diagnostics] are the markers to paint; duplicates on a line are reduced
+///   to the most severe one.
 CodeIndicatorBuilder novaGutterBuilder({
   required NovaEditorTheme theme,
   required NovaGutterStyle style,
