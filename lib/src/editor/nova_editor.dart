@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:re_editor/re_editor.dart';
@@ -30,6 +31,9 @@ class NovaEditor extends StatefulWidget {
     this.highlightMode,
     this.promptsBuilder,
     this.completionRefresh,
+    this.completionDocumentationBuilder,
+    this.completionDeprecatedPredicate,
+    this.completionLoading,
     this.focusNode,
     this.findController,
     this.gutterStyle = const NovaGutterStyle(),
@@ -72,6 +76,24 @@ class NovaEditor extends StatefulWidget {
   /// list would wait for the next keystroke, by which time the suggestion is
   /// stale. Notifying this list re-evaluates the builder immediately.
   final Listenable? completionRefresh;
+
+  /// Supplies the documentation line shown under a completion row.
+  ///
+  /// The callback receives the [CodePrompt] the app produced (an LSP item can
+  /// be matched back to it by word) and must be cheap and side-effect free.
+  /// Null keeps the original two-line rows.
+  final NovaCompletionDocumentationBuilder? completionDocumentationBuilder;
+
+  /// Marks a completion row as deprecated when the app's language server or
+  /// completion source knows it is. Null leaves every row unmarked.
+  final NovaCompletionDeprecatedPredicate? completionDeprecatedPredicate;
+
+  /// Loading state for asynchronous completion sources.
+  ///
+  /// While true and no prompts have arrived, the popup shows an inert
+  /// "Searching…" row. A [ValueListenable] is used so the overlay rebuilds
+  /// when the request completes without waiting for another keystroke.
+  final ValueListenable<bool>? completionLoading;
 
   /// The editor's focus node. One is created and disposed when null.
   final FocusNode? focusNode;
@@ -409,6 +431,9 @@ class _NovaEditorState extends State<NovaEditor> {
                   widget.onCompletionAccepted?.call(result);
                 },
                 theme: widget.theme,
+                documentationBuilder: widget.completionDocumentationBuilder,
+                deprecatedPredicate: widget.completionDeprecatedPredicate,
+                loadingListenable: widget.completionLoading,
               );
             },
             child: editor,

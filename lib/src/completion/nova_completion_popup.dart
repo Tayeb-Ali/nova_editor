@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
 import 'package:re_editor/re_editor.dart';
 
@@ -55,6 +56,7 @@ class NovaCompletionPopup extends StatefulWidget
     this.documentationBuilder,
     this.deprecatedPredicate,
     this.loading = false,
+    this.loadingListenable,
   });
 
   /// The anchoring width `re_editor` uses to decide where the popup fits.
@@ -137,6 +139,13 @@ class NovaCompletionPopup extends StatefulWidget
   /// renders the inert [loadingLabel] row instead of collapsing the overlay.
   final bool loading;
 
+  /// Reactive variant of [loading].
+  ///
+  /// The popup listens to this while mounted, so an async source can flip the
+  /// "Searching…" row on and off without the host having to rebuild the editor.
+  /// [loading] is still honoured as an initial/static value.
+  final ValueListenable<bool>? loadingListenable;
+
   /// The height [promptCount] rows need, clamped to [maxRows].
   ///
   /// This is the height without documentation; use [preferredSize] for the
@@ -195,11 +204,15 @@ class NovaCompletionPopup extends StatefulWidget
 class _NovaCompletionPopupState extends State<NovaCompletionPopup> {
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<CodeAutocompleteEditingValue>(
+    Widget buildFor(
+      bool loading,
+    ) => ValueListenableBuilder<CodeAutocompleteEditingValue>(
       valueListenable: widget.notifier,
       builder: (context, value, _) {
         final int count = value.prompts.length;
-        if (count == 0 && !widget.loading) return const SizedBox.shrink();
+        if (count == 0 && !loading && !widget.loading) {
+          return const SizedBox.shrink();
+        }
 
         final Color background = Color.alphaBlend(
           widget.theme.foreground.withValues(alpha: 0.04),
@@ -271,6 +284,13 @@ class _NovaCompletionPopupState extends State<NovaCompletionPopup> {
           ),
         );
       },
+    );
+
+    final ValueListenable<bool>? loading = widget.loadingListenable;
+    if (loading == null) return buildFor(false);
+    return ValueListenableBuilder<bool>(
+      valueListenable: loading,
+      builder: (context, value, child) => buildFor(value),
     );
   }
 }
