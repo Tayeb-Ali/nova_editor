@@ -3,7 +3,7 @@ description: >-
   A focused Flutter code editor on top of re_editor: gutter, folding,
   completion popup, find bar and soft-keyboard input policy, with no app
   state or provider dependencies.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/Tayeb-Ali/nova_editor
 issue_tracker: https://github.com/Tayeb-Ali/nova_editor/issues
 topics:
