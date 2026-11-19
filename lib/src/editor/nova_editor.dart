@@ -38,6 +38,10 @@ class NovaEditor extends StatefulWidget {
     this.findController,
     this.gutterStyle = const NovaGutterStyle(),
     this.diagnostics = const <NovaDiagnostic>[],
+    this.onDiagnosticTap,
+    this.chunkController,
+    this.onChunkControllerReady,
+    this.highlightMatchingBracket = false,
     this.wordWrap = false,
     this.readOnly = false,
     this.autofocus = true,
@@ -108,6 +112,34 @@ class NovaEditor extends StatefulWidget {
   /// Line markers. Lines are document lines, so they survive folding.
   final List<NovaDiagnostic> diagnostics;
 
+  /// Called when a diagnostic marker in the gutter is tapped.
+  ///
+  /// Null keeps the marker paint-only: no gesture area, no tooltip and no
+  /// extra layout in the gutter. When set, each marker has a 20px touch target
+  /// and shows its message in a tooltip on hover.
+  final ValueChanged<NovaDiagnostic>? onDiagnosticTap;
+
+  /// The fold controller the gutter uses, when the host wants to own it.
+  ///
+  /// `re_editor` always creates a controller of its own for the editor body;
+  /// supplying this one makes the gutter (and therefore the reported controller
+  /// below) use the host's instance instead. Hosts that pass it own its
+  /// lifecycle. Null keeps the original behaviour of using `re_editor`'s
+  /// controller.
+  final CodeChunkController? chunkController;
+
+  /// Called once with the fold controller that is actually in use.
+  ///
+  /// This is the handle for the `novaFoldAll`, `novaUnfoldAll` and
+  /// `novaFoldToLevel` helpers: a host toolbar only needs to keep the value
+  /// handed here. It fires again if the controller changes (for example when
+  /// the language changes and `re_editor` rebuilds its state).
+  final ValueChanged<CodeChunkController>? onChunkControllerReady;
+
+  /// Paints a subtle gutter marker for the bracket matching the one beside the
+  /// caret. Off by default; it never installs a keyboard handler.
+  final bool highlightMatchingBracket;
+
   final bool wordWrap;
   final bool readOnly;
   final bool autofocus;
@@ -149,6 +181,10 @@ class _NovaEditorState extends State<NovaEditor> {
   /// The notifier `re_editor` hands to [NovaCompletionPopup] for the list that
   /// is currently on screen. Null while no list is mounted.
   ValueNotifier<CodeAutocompleteEditingValue>? _popupNotifier;
+
+  /// Guards [ValueChanged] notification so a host is called once per controller
+  /// rather than on every gutter build.
+  CodeChunkController? _reportedChunkController;
 
   /// The app's builder, wrapped so an empty result still mounts the list.
   late NovaLivePromptsBuilder _prompts;
@@ -372,6 +408,22 @@ class _NovaEditorState extends State<NovaEditor> {
     widget.onChanged?.call(widget.controller.text);
   }
 
+  /// Surfaces the controller that the gutter is really using.
+  ///
+  /// The gutter builder is called while `re_editor` builds, so the callback is
+  /// deferred to the end of the frame: a host may safely fold or call
+  /// `setState` from it.
+  void _reportChunkController(CodeChunkController controller) {
+    if (identical(_reportedChunkController, controller)) return;
+    _reportedChunkController = controller;
+    final ValueChanged<CodeChunkController>? ready =
+        widget.onChunkControllerReady;
+    if (ready == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ready(controller);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final TextStyle codeStyle = TextStyle(
@@ -386,6 +438,15 @@ class _NovaEditorState extends State<NovaEditor> {
             widget.languageId ?? 'plaintext',
             widget.highlightMode!,
           );
+
+    final CodeIndicatorBuilder gutter = novaGutterBuilder(
+      theme: widget.theme,
+      style: widget.gutterStyle,
+      codeStyle: codeStyle,
+      diagnostics: widget.diagnostics,
+      onDiagnosticTap: widget.onDiagnosticTap,
+      highlightMatchingBracket: widget.highlightMatchingBracket,
+    );
 
     final Widget editor = CodeEditor(
       // Recreates the fold controller when the language changes; re_editor
@@ -407,12 +468,13 @@ class _NovaEditorState extends State<NovaEditor> {
         fontHeight: widget.fontHeight,
         codeTheme: codeTheme,
       ),
-      indicatorBuilder: novaGutterBuilder(
-        theme: widget.theme,
-        style: widget.gutterStyle,
-        codeStyle: codeStyle,
-        diagnostics: widget.diagnostics,
-      ),
+      indicatorBuilder:
+          (context, editingController, internalChunkController, notifier) {
+            final CodeChunkController effective =
+                widget.chunkController ?? internalChunkController;
+            _reportChunkController(effective);
+            return gutter(context, editingController, effective, notifier);
+          },
       chunkAnalyzer: NovaChunkAnalyzer.forLanguage(widget.languageId),
     );
 

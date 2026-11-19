@@ -19,5 +19,6 @@ export 'src/find/nova_find_panel.dart';
 export 'src/folding/nova_brace_chunk_analyzer.dart';
 export 'src/folding/nova_chunk_analyzer.dart';
 export 'src/folding/nova_fold_actions.dart';
+export 'src/gutter/nova_bracket_matcher.dart';
 export 'src/theme/nova_editor_theme.dart';
 export 'src/theme/nova_builtin_themes.dart';
