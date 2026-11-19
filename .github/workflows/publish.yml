@@ -1,0 +1,22 @@
+name: Publish to pub.dev
+
+# Automated publishing is enabled on
+# https://pub.dev/packages/nova_editor/admin with:
+#   repository:  Tayeb-Ali/nova_editor
+#   tag pattern: v{{version}}
+#   environment: pub.dev
+#
+# Keep the tag filter below in sync with the tag pattern there.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    permissions:
+      id-token: write # OIDC token minted by GitHub for pub.dev.
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      environment: pub.dev

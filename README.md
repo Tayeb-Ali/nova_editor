@@ -1,5 +1,8 @@
 # nova_editor
 
+[![pub package](https://img.shields.io/pub/v/nova_editor.svg)](https://pub.dev/packages/nova_editor)
+[![CI](https://github.com/Tayeb-Ali/nova_editor/actions/workflows/ci.yml/badge.svg)](https://github.com/Tayeb-Ali/nova_editor/actions/workflows/ci.yml)
+
 A focused code-editing surface for Flutter, built directly on
 [`re_editor`](https://pub.dev/packages/re_editor).
 
