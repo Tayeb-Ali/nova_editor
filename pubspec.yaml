@@ -20,11 +20,12 @@ screenshots:
 
 environment:
   sdk: ^3.13.3
-  flutter: ">=3.41.0"
+  flutter: ">=3.47.0"
 
 dependencies:
   flutter:
     sdk: flutter
+  material_ui: ^1.11.1
   re_editor: ^0.10.0
   re_highlight: ^0.0.3
 

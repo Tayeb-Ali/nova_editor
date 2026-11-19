@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  material_ui: ^1.11.1
   nova_editor:
     path: ../
   re_editor: ^0.10.0
